@@ -1,0 +1,30 @@
+# Optional: nicer hostname-based routing.
+# Requires an ingress controller (e.g. ingress-nginx) installed in the cluster.
+# On Docker Desktop, install with:
+#   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+#   helm install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace
+#
+# Then add to /etc/hosts (Mac):
+#   127.0.0.1  heart-disease.local
+#
+# Access via: http://heart-disease.local/form
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: heart-disease-api
+  namespace: heart-disease
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: heart-disease.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: heart-disease-api
+                port:
+                  number: 8080

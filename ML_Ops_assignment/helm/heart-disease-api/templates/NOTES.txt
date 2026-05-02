@@ -1,0 +1,24 @@
+{{ .Chart.Name }} {{ .Chart.AppVersion }} installed in namespace "{{ .Release.Namespace }}".
+
+Check rollout status:
+  kubectl -n {{ .Release.Namespace }} rollout status deployment/{{ include "heart-disease-api.fullname" . }}
+
+Inspect resources:
+  kubectl -n {{ .Release.Namespace }} get all
+
+{{- if eq .Values.service.type "LoadBalancer" }}
+
+On Docker Desktop, the LoadBalancer is reachable at:
+  http://localhost:{{ .Values.service.port }}/health
+  http://localhost:{{ .Values.service.port }}/form
+
+Sample prediction:
+  curl -s -X POST http://localhost:{{ .Values.service.port }}/predict \
+    -H "Content-Type: application/json" \
+    -d '{"age":67,"sex":1,"cp":4,"trestbps":160,"chol":286,"fbs":0,
+         "restecg":2,"thalach":108,"exang":1,"oldpeak":1.5,"slope":2,
+         "ca":3,"thal":7}'
+{{- end }}
+
+Uninstall with:
+  helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}

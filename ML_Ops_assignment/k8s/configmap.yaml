@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heart-disease-config
+  namespace: heart-disease
+data:
+  PORT: "8080"
+  MODEL_PATH: "models/heart_model.pkl"
+  PYTHONUNBUFFERED: "1"
