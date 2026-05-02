@@ -1,0 +1,46 @@
+# Keep the build context (and resulting image) small by excluding everything
+# that is not required at serving time.
+
+# Python virtual environment
+venv/
+.venv/
+
+# Python bytecode / caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# Notebooks and EDA artifacts
+notebooks/
+.ipynb_checkpoints/
+
+# Raw data and locally regenerated splits (model already trained)
+Raw_data/
+data/processed/
+
+# Experiment tracking store (huge; not needed at inference)
+mlruns/
+mlartifacts/
+
+# Reports and figures
+reports/
+
+# Tests (only needed in CI, not in serving image)
+tests/
+
+# Dev-only requirements
+requirements-dev.txt
+
+# Git / IDE / OS metadata
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Docker meta (avoid recursive copy)
+Dockerfile
+.dockerignore

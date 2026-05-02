@@ -1,0 +1,12 @@
+# Runtime dependencies (used in production container).
+# Keep this list minimal so the Docker image stays small.
+
+# Core data + modelling
+numpy==2.0.2
+pandas==2.3.3
+scikit-learn==1.6.1
+joblib==1.5.3
+
+# Serving (Flask app + production WSGI server)
+flask==3.1.2
+gunicorn==23.0.0

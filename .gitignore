@@ -1,0 +1,50 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+.env
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# --- MLflow local tracking store ---
+mlruns/
+mlartifacts/
+
+# --- Generated data + models ---
+# Train/test splits are reproducible from src/data/prepare.py
+ML_Ops_assignment/data/processed/*.csv
+# Trained models are reproducible from src/training/train.py
+ML_Ops_assignment/models/*.pkl
+
+# --- Reports artifacts (regenerable) ---
+ML_Ops_assignment/reports/metrics.json
+
+# --- IDE / editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Test / coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Reference materials (not part of submission) ---
+mlops_demo/
+Mlops_Assignment1.pdf
