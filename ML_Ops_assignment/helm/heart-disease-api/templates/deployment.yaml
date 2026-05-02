@@ -18,6 +18,12 @@ spec:
     metadata:
       labels:
         {{- include "heart-disease-api.selectorLabels" . | nindent 8 }}
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.service.port | quote }}
+        prometheus.io/path: {{ .Values.metrics.path | quote }}
+      {{- end }}
     spec:
       containers:
         - name: api

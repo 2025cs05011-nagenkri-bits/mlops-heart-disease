@@ -79,3 +79,15 @@ def test_predict_response_keys(client, sample_high_risk):
     resp = client.post("/predict", json=sample_high_risk)
     body = resp.get_json()
     assert set(body.keys()) == {"prediction", "label", "disease_probability"}
+
+
+def test_metrics_endpoint_exposes_prometheus_format(client, sample_high_risk):
+    client.post("/predict", json=sample_high_risk)
+    resp = client.get("/metrics")
+    assert resp.status_code == 200
+    assert resp.mimetype.startswith("text/plain")
+    body = resp.get_data(as_text=True)
+    assert "http_requests_total" in body
+    assert "http_request_duration_seconds" in body
+    assert "model_predictions_total" in body
+    assert "model_loaded" in body

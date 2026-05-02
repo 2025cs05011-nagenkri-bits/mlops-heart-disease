@@ -21,10 +21,14 @@ spec:
       labels:
         app: heart-disease-api
         component: serving
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: api
-          image: heart-disease-api:v1
+          image: heart-disease-api:v2
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

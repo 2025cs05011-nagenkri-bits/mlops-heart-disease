@@ -25,5 +25,6 @@ COPY models/ ./models/
 # Cloud Run / generic runtime expect the service to listen on $PORT
 EXPOSE 8080
 
-# Production WSGI server (2 workers, 120s timeout for slower inferences)
-CMD exec gunicorn --bind 0.0.0.0:${PORT} --workers 2 --timeout 120 src.serving.app:app
+# Production WSGI server (1 worker per pod so prometheus_client counters
+# remain consistent within a process; horizontal scale comes from K8s replicas)
+CMD exec gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 4 --timeout 120 src.serving.app:app

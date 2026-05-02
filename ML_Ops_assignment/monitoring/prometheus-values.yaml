@@ -1,0 +1,31 @@
+# Lean Prometheus values for local Docker Desktop Kubernetes.
+# Keeps the demo footprint small while still scraping pods that carry
+# the standard `prometheus.io/scrape: "true"` annotation (default behaviour
+# of the prometheus-community/prometheus chart's `prometheus.yml` job
+# `kubernetes-pods`).
+
+alertmanager:
+  enabled: false
+
+prometheus-pushgateway:
+  enabled: false
+
+prometheus-node-exporter:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
+
+server:
+  persistentVolume:
+    enabled: false
+  retention: 2d
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  service:
+    type: ClusterIP

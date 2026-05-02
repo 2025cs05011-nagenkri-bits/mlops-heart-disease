@@ -10,3 +10,6 @@ joblib==1.5.3
 # Serving (Flask app + production WSGI server)
 flask==3.1.2
 gunicorn==23.0.0
+
+# Monitoring (Prometheus metrics exposition)
+prometheus-client==0.21.1

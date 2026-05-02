@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: heart-disease-api
-  tag: v1
+  tag: v2
   pullPolicy: IfNotPresent
 
 service:
@@ -37,3 +37,7 @@ ingress:
   host: heart-disease.local
   path: /
   pathType: Prefix
+
+metrics:
+  enabled: true
+  path: /metrics

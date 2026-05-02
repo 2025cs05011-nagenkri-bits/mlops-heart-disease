@@ -6,7 +6,7 @@
 # ============================================================
 set -euo pipefail
 
-IMAGE_TAG="heart-disease-api:v1"
+IMAGE_TAG="heart-disease-api:v2"
 NAMESPACE="heart-disease"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"

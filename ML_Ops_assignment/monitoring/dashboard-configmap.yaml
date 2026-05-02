@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heart-disease-grafana-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  heart-disease.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Model Loaded (per pod)",
+          "id": 1,
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [{"expr": "model_loaded", "refId": "A"}]
+        },
+        {
+          "type": "stat",
+          "title": "Total Predictions",
+          "id": 2,
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [{"expr": "sum(model_predictions_total)", "refId": "A"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP Request Rate (req/s) by endpoint",
+          "id": 3,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [{
+            "expr": "sum by (endpoint) (rate(http_requests_total{endpoint!=\"/metrics\"}[1m]))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "P95 Request Latency (s) by endpoint",
+          "id": 4,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [{
+            "expr": "histogram_quantile(0.95, sum by (endpoint, le) (rate(http_request_duration_seconds_bucket{endpoint!=\"/metrics\"}[5m])))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "Prediction Rate by Class (per minute)",
+          "id": 5,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [{
+            "expr": "sum by (label) (rate(model_predictions_total[1m])) * 60",
+            "legendFormat": "{{label}}",
+            "refId": "A"
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP Status Codes",
+          "id": 6,
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+          "targets": [{
+            "expr": "sum by (http_status) (rate(http_requests_total[1m]))",
+            "legendFormat": "{{http_status}}",
+            "refId": "A"
+          }]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "tags": ["heart-disease", "mlops"],
+      "time": {"from": "now-30m", "to": "now"},
+      "timezone": "browser",
+      "title": "Heart Disease API",
+      "uid": "heart-disease-api",
+      "version": 1
+    }
