@@ -13,13 +13,13 @@ Usage:
   python main.py --head 10
   python main.py --stats
   python main.py --save heart.csv
-  python main.py --data raw_data/heart+disease/processed.cleveland.data
+  python main.py --data Raw_data/heart+disease/processed.cleveland.data
 """
 
 import argparse
 import pandas as pd
 
-DEFAULT_DATA_PATH = "raw_data/heart+disease/processed.cleveland.data"
+DEFAULT_DATA_PATH = "Raw_data/heart+disease/processed.cleveland.data"
 
 COLUMN_NAMES = [
     "age", "sex", "cp", "trestbps", "chol", "fbs", "restecg",

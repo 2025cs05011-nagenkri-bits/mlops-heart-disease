@@ -18,7 +18,7 @@ import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-DEFAULT_DATA_PATH = "raw_data/heart+disease/processed.cleveland.data"
+DEFAULT_DATA_PATH = "Raw_data/heart+disease/processed.cleveland.data"
 DEFAULT_OUTPUT_DIR = "data/processed"
 
 COLUMN_NAMES = [

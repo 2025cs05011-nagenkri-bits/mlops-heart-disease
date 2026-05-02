@@ -52,6 +52,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: pip
+          cache-dependency-path: ML_Ops_assignment/requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Generate model artifact for image
+        run: |
+          python -m src.data.prepare
+          python -m src.training.train
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
