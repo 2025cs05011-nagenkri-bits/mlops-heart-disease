@@ -23,3 +23,6 @@ pytest==8.3.4
 
 # Linting
 ruff==0.8.6
+
+# Report generation (scripts/generate_report.py)
+python-docx==1.1.2

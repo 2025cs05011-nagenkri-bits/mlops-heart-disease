@@ -48,3 +48,6 @@ htmlcov/
 # --- Reference materials (not part of submission) ---
 mlops_demo/
 Mlops_Assignment1.pdf
+
+# --- Office lock files ---
+~$*
