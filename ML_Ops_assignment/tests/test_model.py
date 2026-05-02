@@ -7,7 +7,6 @@ Smoke tests for the persisted heart_model.pkl artifact.
 import os
 
 import joblib
-import numpy as np
 import pandas as pd
 import pytest
 

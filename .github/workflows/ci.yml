@@ -35,6 +35,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
+      - name: Lint (ruff)
+        run: ruff check src/ tests/ main.py
+
       - name: Regenerate train/test splits
         run: python -m src.data.prepare
 
@@ -43,6 +46,18 @@ jobs:
 
       - name: Run pytest
         run: python -m pytest tests/ --tb=short
+
+      - name: Upload training artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: heart-disease-model-py${{ matrix.python-version }}
+          path: |
+            ML_Ops_assignment/models/heart_model.pkl
+            ML_Ops_assignment/reports/metrics.json
+            ML_Ops_assignment/reports/figures/
+          if-no-files-found: warn
+          retention-days: 14
 
   docker:
     name: Build Docker image

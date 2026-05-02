@@ -31,7 +31,7 @@ data:
           "id": 3,
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
           "targets": [{
-            "expr": "sum by (endpoint) (rate(http_requests_total{endpoint!=\"/metrics\"}[1m]))",
+            "expr": "sum by (endpoint) (rate(http_requests_total{endpoint!=\"/metrics\"}[2m]))",
             "legendFormat": "{{endpoint}}",
             "refId": "A"
           }]
@@ -53,7 +53,7 @@ data:
           "id": 5,
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
           "targets": [{
-            "expr": "sum by (label) (rate(model_predictions_total[1m])) * 60",
+            "expr": "sum by (label) (rate(model_predictions_total[2m])) * 60",
             "legendFormat": "{{label}}",
             "refId": "A"
           }]
@@ -64,7 +64,7 @@ data:
           "id": 6,
           "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
           "targets": [{
-            "expr": "sum by (http_status) (rate(http_requests_total[1m]))",
+            "expr": "sum by (http_status) (rate(http_requests_total[2m]))",
             "legendFormat": "{{http_status}}",
             "refId": "A"
           }]
@@ -77,5 +77,5 @@ data:
       "timezone": "browser",
       "title": "Heart Disease API",
       "uid": "heart-disease-api",
-      "version": 1
+      "version": 2
     }

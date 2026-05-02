@@ -56,7 +56,7 @@ def main():
     print(f"Samples : {df.shape[0]}")
     print(f"Columns : {df.shape[1]}")
     print(f"Features: {list(df.columns[:-1])}")
-    print(f"Target  : 0 = no disease, 1 = disease present")
+    print("Target  : 0 = no disease, 1 = disease present")
     print("=" * 50)
 
     if args.head:

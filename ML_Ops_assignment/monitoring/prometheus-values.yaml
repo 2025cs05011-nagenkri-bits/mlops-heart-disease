@@ -29,3 +29,6 @@ server:
       memory: 512Mi
   service:
     type: ClusterIP
+  global:
+    scrape_interval: 30s
+    evaluation_interval: 30s

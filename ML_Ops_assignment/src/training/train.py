@@ -36,6 +36,7 @@ from sklearn.metrics import (
     accuracy_score, classification_report, confusion_matrix, f1_score,
     precision_score, recall_score, roc_auc_score,
 )
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
 from sklearn.pipeline import Pipeline
 
 from src.data.preprocess import build_preprocessor, split_features_target
@@ -46,6 +47,24 @@ DEFAULT_MODEL_PATH = "models/heart_model.pkl"
 DEFAULT_METRICS_PATH = "reports/metrics.json"
 DEFAULT_EXPERIMENT = "heart_disease_classification"
 DEFAULT_TRACKING_URI = "./mlruns"
+CV_FOLDS = 5
+CV_SCORING = ["accuracy", "precision", "recall", "f1", "roc_auc"]
+
+CANDIDATES = {
+    "logistic_regression": {
+        "estimator": LogisticRegression(max_iter=1000),
+        "param_grid": {
+            "classifier__C": [0.1, 1.0, 10.0],
+        },
+    },
+    "random_forest": {
+        "estimator": RandomForestClassifier(n_jobs=-1),
+        "param_grid": {
+            "classifier__n_estimators": [100, 200],
+            "classifier__max_depth": [None, 5, 10],
+        },
+    },
+}
 
 
 def build_pipeline(classifier):
@@ -91,38 +110,65 @@ def _log_confusion_matrix(cm, name):
     os.rmdir(tmp_dir)
 
 
+def cross_validate_summary(pipeline, X, y, cv):
+    """Run cross_validate over CV_SCORING and return a flat mean/std dict."""
+    cvr = cross_validate(
+        pipeline, X, y, cv=cv, scoring=CV_SCORING,
+        n_jobs=-1, return_train_score=False,
+    )
+    summary = {}
+    for scorer in CV_SCORING:
+        scores = cvr[f"test_{scorer}"]
+        summary[f"cv_{scorer}_mean"] = float(scores.mean())
+        summary[f"cv_{scorer}_std"] = float(scores.std())
+    return summary
+
+
 def train_candidates(X_train, y_train, X_test, y_test, random_state=42):
-    candidates = {
-        "logistic_regression": LogisticRegression(
-            max_iter=1000, random_state=random_state,
-        ),
-        "random_forest": RandomForestClassifier(
-            n_estimators=200, max_depth=None, random_state=random_state, n_jobs=-1,
-        ),
-    }
+    """For each candidate: GridSearchCV-tune, 5-fold CV-evaluate, then test-set evaluate."""
+    cv = StratifiedKFold(n_splits=CV_FOLDS, shuffle=True, random_state=random_state)
     results = {}
     fitted = {}
     run_ids = {}
-    for name, clf in candidates.items():
+    for name, spec in CANDIDATES.items():
         with mlflow.start_run(run_name=name) as run:
             mlflow.set_tag("model_family", name)
-            mlflow.log_params(clf.get_params())
             mlflow.log_param("random_state", random_state)
             mlflow.log_param("n_train", len(X_train))
             mlflow.log_param("n_test", len(X_test))
+            mlflow.log_param("cv_folds", CV_FOLDS)
 
-            pipe = build_pipeline(clf)
-            pipe.fit(X_train, y_train)
-            metrics = evaluate(pipe, X_test, y_test)
+            estimator = spec["estimator"]
+            if hasattr(estimator, "random_state"):
+                estimator.set_params(random_state=random_state)
+            base_pipe = build_pipeline(estimator)
 
-            scalar_metrics = {k: v for k, v in metrics.items()
-                              if isinstance(v, (int, float))}
-            mlflow.log_metrics(scalar_metrics)
+            search = GridSearchCV(
+                base_pipe, spec["param_grid"], cv=cv,
+                scoring="roc_auc", n_jobs=-1, refit=True,
+            )
+            search.fit(X_train, y_train)
+            best_pipe = search.best_estimator_
+
+            for k, v in search.best_params_.items():
+                mlflow.log_param(f"best_{k}", v)
+            mlflow.log_metric("cv_best_roc_auc_search", float(search.best_score_))
+
+            cv_summary = cross_validate_summary(best_pipe, X_train, y_train, cv)
+            mlflow.log_metrics(cv_summary)
+
+            metrics = evaluate(best_pipe, X_test, y_test)
+            scalar_test = {f"test_{k}": v for k, v in metrics.items()
+                           if isinstance(v, (int, float))}
+            mlflow.log_metrics(scalar_test)
             _log_confusion_matrix(metrics["confusion_matrix"], name)
-            mlflow.sklearn.log_model(sk_model=pipe, name="model")
+            mlflow.sklearn.log_model(sk_model=best_pipe, name="model")
+
+            metrics["best_params"] = search.best_params_
+            metrics["cv"] = cv_summary
 
             results[name] = metrics
-            fitted[name] = pipe
+            fitted[name] = best_pipe
             run_ids[name] = run.info.run_id
     return fitted, results, run_ids
 
@@ -146,16 +192,23 @@ def save_artifacts(pipeline, results, best_name, model_path, metrics_path):
 
 def print_summary(results, best_name):
     print("Model comparison (test set)")
-    print("=" * 70)
-    header = f"{'model':<22}{'accuracy':>10}{'precision':>11}{'recall':>9}{'f1':>9}{'roc_auc':>10}"
+    print("=" * 78)
+    header = (
+        f"{'model':<22}{'accuracy':>10}{'precision':>11}{'recall':>9}"
+        f"{'f1':>9}{'roc_auc':>10}{'cv_roc_auc':>12}"
+    )
     print(header)
-    print("-" * 70)
+    print("-" * 78)
     for name, m in results.items():
         marker = "*" if name == best_name else " "
+        cv_mean = m["cv"]["cv_roc_auc_mean"]
+        cv_std = m["cv"]["cv_roc_auc_std"]
         print(f"{marker} {name:<20}{m['accuracy']:>10.4f}{m['precision']:>11.4f}"
-              f"{m['recall']:>9.4f}{m['f1']:>9.4f}{m['roc_auc']:>10.4f}")
-    print("=" * 70)
-    print(f"Selected (highest roc_auc): {best_name}")
+              f"{m['recall']:>9.4f}{m['f1']:>9.4f}{m['roc_auc']:>10.4f}"
+              f"  {cv_mean:.4f}±{cv_std:.4f}")
+    print("=" * 78)
+    print(f"Selected (highest test roc_auc): {best_name}")
+    print(f"Best params : {results[best_name]['best_params']}")
 
 
 def main():
