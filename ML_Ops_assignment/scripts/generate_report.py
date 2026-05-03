@@ -87,8 +87,30 @@ SHOTS_K8S = [
      "/form returning a prediction with disease probability."),
     ("08_file_tree.png",
      "Repository tree showing the full project layout."),
-    ("09_docker_dektop.png",
-     "Docker Desktop dashboard showing the running container image."),
+    ("09_docker_dektop_Images.png",
+     "Docker Desktop Images tab - heart-disease-api:v2 (629 MB) alongside "
+     "the Kubernetes system images."),
+    ("10_docker_desktop_Kubernetes.png",
+     "Docker Desktop Kubernetes tab - desktop-control-plane node and "
+     "running pods."),
+]
+
+SHOTS_MLFLOW = [
+    ("01_experiments_list.png",
+     "MLflow UI - heart_disease_classification experiment in the sidebar "
+     "with the runs table loaded."),
+    ("02_runs_table.png",
+     "Runs table sorted by test_roc_auc - LR vs RF candidates with "
+     "best params and CV / test metrics as columns."),
+    ("03_run_overview.png",
+     "Best Logistic Regression run - parameters and metrics panels showing "
+     "best_params, 5 test scorers and 5 CV mean / std scorers."),
+    ("04_run_artifacts.png",
+     "Run artifacts tab - confusion_matrix.png and the serialised sklearn "
+     "Pipeline under model/."),
+    ("05_metrics_chart.png",
+     "Compare-runs view - parallel-coordinates plot of test_roc_auc and "
+     "cv_roc_auc_mean across the LR and RF candidates."),
 ]
 
 SHOTS_MON = [
@@ -118,17 +140,40 @@ SHOTS_MON = [
 
 
 ARCH_ARROWS = [
-    (2.1, 7.9, 2.5, 7.9), (4.3, 7.9, 4.6, 7.9), (6.4, 7.9, 6.7, 7.9),
-    (9.1, 7.9, 9.4, 7.9),
-    (7.5, 7.5, 7.2, 7.0), (8.0, 7.5, 8.5, 7.0), (8.5, 7.5, 10.2, 7.0),
-    (7.2, 6.3, 1.5, 3.8),                          # model -> Dockerfile
-    (1.4, 4.7, 1.4, 3.8),                          # CI lint -> docker build
-    (4.6, 4.7, 5.5, 3.8),                          # CI build -> docker
-    (4.6, 2.9, 5.8, 2.9),                          # Flask -> helm
-    (5.8, 2.9, 8.0, 2.9), (8.9, 2.9, 9.1, 2.9),
-    (8.0, 2.9, 2.5, 1.7),                          # deploy -> prometheus
-    (3.5, 0.8, 4.0, 0.8),                          # prom -> grafana
-    (8.0, 2.9, 7.5, 1.7),                          # deploy -> logs
+    # --- Row 1: Local Dev pipeline (horizontal, y = 7.9) ---
+    (2.1, 7.9, 2.5, 7.9),    # Raw_data -> prepare.py
+    (4.3, 7.9, 4.6, 7.9),    # prepare.py -> data/processed
+    (6.4, 7.9, 6.7, 7.9),    # data/processed -> train.py
+    (9.1, 7.9, 9.4, 7.9),    # train.py -> MLflow
+
+    # --- train.py -> three artifact boxes (down to y = 7.0) ---
+    (7.4, 7.5, 7.25, 7.0),   # train.py -> model.pkl
+    (7.9, 7.5, 8.7, 7.0),    # train.py -> metrics.json
+    (8.4, 7.5, 10.3, 7.0),   # train.py -> figures/
+
+    # --- Row 3: CI pipeline (horizontal, y = 5.1) ---
+    (2.2, 5.1, 2.5, 5.1),    # ruff -> pytest
+    (4.2, 5.1, 4.5, 5.1),    # pytest -> docker build
+    (6.4, 5.1, 6.7, 5.1),    # docker build -> upload-artifact
+
+    # --- model.pkl -> docker build (artifact baked into image) ---
+    (7.25, 6.3, 5.45, 5.5),
+
+    # --- docker build -> Dockerfile (CI produces the runtime image) ---
+    (5.0, 4.7, 1.9, 3.8),
+
+    # --- Row 4: Container & K8s pipeline (horizontal, y = 3.35) ---
+    (2.4, 3.35, 2.7, 3.35),  # Dockerfile -> Flask app
+    (4.6, 3.35, 4.9, 3.35),  # Flask app -> Helm chart
+    (6.8, 3.35, 7.1, 3.35),  # Helm chart -> Deployment
+    (8.9, 3.35, 9.1, 3.35),  # Deployment -> Service
+
+    # --- Deployment -> Observability (down to y = 1.7) ---
+    (7.5, 2.9, 2.5, 1.7),    # Deployment -> Prometheus (scrape /metrics)
+    (8.0, 2.9, 7.5, 1.7),    # Deployment -> JSON logs
+
+    # --- Prometheus -> Grafana (horizontal, y = 1.25) ---
+    (3.5, 1.25, 4.0, 1.25),
 ]
 
 
@@ -405,12 +450,25 @@ def build_report(metrics: dict) -> Document:
         "Random Forest: classifier__n_estimators in {100, 200} x "
         "classifier__max_depth in {None, 5, 10}.",
     ])
+    add_heading(doc, "3.3 Experiment tracking with MLflow", level=2)
     add_para(doc,
         "Every candidate run is logged to MLflow under the "
-        "heart_disease_classification experiment, recording all "
-        "hyperparameters, the best params, the CV mean and standard "
-        "deviation per scorer, the test metrics, the confusion matrix as "
-        "an image artifact, and the fitted Pipeline as a reusable model.")
+        "heart_disease_classification experiment via a file-backed "
+        "tracking store at ./mlruns. Each run records the full "
+        "hyperparameter grid and the chosen best_params; ten metrics "
+        "(five test scorers and five cross-validation mean / standard "
+        "deviation pairs); the confusion matrix as a PNG artifact; and "
+        "the fitted sklearn Pipeline serialised under model/. The run "
+        "with the highest test ROC-AUC is tagged selected=true and the "
+        "same Pipeline is also written to models/heart_model.pkl for "
+        "the serving layer to load at startup.")
+    add_para(doc,
+        "Reproducing the tracking UI is a single command: "
+        "mlflow ui --backend-store-uri ./mlruns --port 5000, then open "
+        "http://localhost:5000 in a browser. The screenshots below were "
+        "captured against the runs that produced the figures and metrics "
+        "elsewhere in this report.")
+    next_idx = add_screenshots(doc, "mlflow", SHOTS_MLFLOW, start_idx=6)
     doc.add_page_break()
 
     # ---- 4. Results ----
@@ -453,10 +511,12 @@ def build_report(metrics: dict) -> Document:
         "on the principle of parsimony given equivalent or better "
         "discriminative performance.")
     add_figure(doc, FIG_DIR / "cm_logistic_regression.png",
-               "Figure 4. Confusion matrix - Logistic Regression "
+               f"Figure {next_idx}. Confusion matrix - Logistic Regression "
                "(selected model).", width_cm=10)
     add_figure(doc, FIG_DIR / "cm_random_forest.png",
-               "Figure 5. Confusion matrix - Random Forest.", width_cm=10)
+               f"Figure {next_idx + 1}. Confusion matrix - "
+               "Random Forest.", width_cm=10)
+    next_idx += 2
     doc.add_page_break()
 
     # ---- 5. Engineering: serving, container, CI ----
@@ -528,7 +588,7 @@ def build_report(metrics: dict) -> Document:
         "logs, curl outputs from the endpoints, the browser-rendered "
         "prediction form, the project tree, and the Docker Desktop "
         "dashboard.")
-    next_idx = add_screenshots(doc, "k8s", SHOTS_K8S, start_idx=6)
+    next_idx = add_screenshots(doc, "k8s", SHOTS_K8S, start_idx=next_idx)
     doc.add_page_break()
 
     # ---- 7. Monitoring ----
