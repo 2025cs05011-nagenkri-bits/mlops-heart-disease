@@ -63,6 +63,60 @@ ARCH_BOXES = [
     (6.3, 0.8, 2.4, 0.9, "JSON logs\nkubectl logs -f", "#e6f4ea", "Observability"),
 ]
 
+# Embedded screenshots: (filename, caption-tail). Numbering is assigned at
+# render time so the figure counter stays continuous with the rest of the
+# document (Figures 1-5 are the architecture, EDA and confusion matrices).
+SHOTS_K8S = [
+    ("01_cluster_nodes.png",
+     "Docker Desktop Kubernetes node in Ready state."),
+    ("02_kubectl_get_all_LoadBalance.png",
+     "kubectl get all - Deployment, Service (LoadBalancer @ localhost) "
+     "and two Ready pods."),
+    ("03_helm_release.png",
+     "helm list - heart-disease-api release in deployed status."),
+    ("04_deployment_describe.png",
+     "kubectl describe deployment - rolling-update strategy and "
+     "Prometheus scrape annotations."),
+    ("05_pod_logs.png",
+     "Pod startup logs - model loaded and Flask bound to :8080."),
+    ("06_curl_endpoints.png",
+     "curl against /health and /predict via the LoadBalancer endpoint."),
+    ("07_browser_form_1.png",
+     "Browser-rendered /form with prefilled patient features."),
+    ("07_browser_form_2.png",
+     "/form returning a prediction with disease probability."),
+    ("08_file_tree.png",
+     "Repository tree showing the full project layout."),
+    ("09_docker_dektop.png",
+     "Docker Desktop dashboard showing the running container image."),
+]
+
+SHOTS_MON = [
+    ("01_metrics_endpoint.png",
+     "/metrics endpoint exposing the four Prometheus metric families."),
+    ("02_monitoring_pods.png",
+     "monitoring namespace - Prometheus and Grafana pods in Running state."),
+    ("03_prometheus_targets.png",
+     "Prometheus targets page - heart-disease-api pods discovered via "
+     "pod annotations."),
+    ("04_prometheus_query.png",
+     "Prometheus instant query - http_requests_total counters by "
+     "endpoint, method and status."),
+    ("05_prometheus_rate.png",
+     "Prometheus rate query - HTTP request rate over the 2-minute window."),
+    ("06_grafana_login.png",
+     "Grafana login screen reached via kubectl port-forward on :3000."),
+    ("07_grafana_dashboard.png",
+     "Grafana dashboard - all six panels populated with live traffic."),
+    ("08_grafana_panel_zoom.png",
+     "HTTP Request Rate panel - full-screen view with endpoint legend."),
+    ("09_pod_logs.png",
+     "Application JSON logs streamed via kubectl logs -f."),
+    ("10_test_suite.png",
+     "Full pytest suite - 22 test cases passing locally."),
+]
+
+
 ARCH_ARROWS = [
     (2.1, 7.9, 2.5, 7.9), (4.3, 7.9, 4.6, 7.9), (6.4, 7.9, 6.7, 7.9),
     (9.1, 7.9, 9.4, 7.9),
@@ -180,6 +234,23 @@ def add_figure(doc, img_path: Path, caption: str, width_cm=15.5):
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = cap.add_run(caption)
     _set_run(r, size=9, italic=True, color=(0x55, 0x55, 0x55))
+
+
+def add_screenshots(doc, subdir: str, shots, start_idx: int,
+                    width_cm: float = 14.5) -> int:
+    """Embed a list of screenshots as sequentially numbered figures.
+
+    Returns the next available figure index after this batch.
+    """
+    idx = start_idx
+    for fname, caption_tail in shots:
+        path = SHOT_DIR / subdir / fname
+        if not path.exists():
+            continue
+        add_figure(doc, path, f"Figure {idx}. {caption_tail}",
+                   width_cm=width_cm)
+        idx += 1
+    return idx
 
 
 def add_table(doc, headers, rows, col_widths_cm=None):
@@ -450,13 +521,14 @@ def build_report(metrics: dict) -> Document:
         "make the pods discoverable by Prometheus without any extra "
         "configuration on the operator side.")
     add_para(doc,
-        "Screenshots reports/screenshots/k8s/01-09 capture the cluster "
-        "state during the demo: cluster nodes, kubectl get all output "
-        "showing the LoadBalancer with an external IP of localhost, the "
-        "Helm release listing, the Deployment describe output with the "
-        "Prometheus annotations, pod logs, curl outputs from the "
-        "endpoints, the browser-rendered prediction form, the project "
-        "tree, and the Docker Desktop dashboard.")
+        "The figures below capture the cluster state during the demo: "
+        "cluster nodes, kubectl get all output showing the LoadBalancer "
+        "with an external IP of localhost, the Helm release listing, the "
+        "Deployment describe output with the Prometheus annotations, pod "
+        "logs, curl outputs from the endpoints, the browser-rendered "
+        "prediction form, the project tree, and the Docker Desktop "
+        "dashboard.")
+    next_idx = add_screenshots(doc, "k8s", SHOTS_K8S, start_idx=6)
     doc.add_page_break()
 
     # ---- 7. Monitoring ----
@@ -484,12 +556,14 @@ def build_report(metrics: dict) -> Document:
         "request rate by endpoint, P95 request latency, prediction rate "
         "by predicted class and HTTP status code distribution. Rate "
         "panels use a 2-minute window to ensure that the query has at "
-        "least four samples available even if a single scrape is missed. "
-        "Screenshots reports/screenshots/monitoring/01-10 document the "
-        "/metrics endpoint, the monitoring pods, Prometheus targets and "
-        "ad-hoc queries, the Grafana dashboard and a zoomed-in view of "
-        "the HTTP Request Rate panel, application pod logs, and the full "
-        "test suite.")
+        "least four samples available even if a single scrape is missed.")
+    add_para(doc,
+        "The figures below document the /metrics endpoint, the monitoring "
+        "pods, Prometheus targets and ad-hoc queries, the Grafana login "
+        "screen and dashboard with a zoomed-in view of the HTTP Request "
+        "Rate panel, the streamed application JSON logs, and the full "
+        "pytest suite.")
+    add_screenshots(doc, "monitoring", SHOTS_MON, start_idx=next_idx)
     doc.add_page_break()
 
     # ---- 8. Reproducibility, Conclusion ----

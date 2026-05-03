@@ -94,6 +94,35 @@ flowchart LR
 
 ---
 
+## Dataset
+
+The Cleveland Heart Disease dataset (UCI ML Repository, ID 45) is **already
+committed** to `ML_Ops_assignment/Raw_data/heart+disease/`, so reproducing
+the pipeline requires no external download.
+
+If you ever need to re-fetch from the upstream archive, use the helper script:
+
+```bash
+cd ML_Ops_assignment
+./scripts/download_data.sh           # idempotent; skips if data present
+./scripts/download_data.sh --force   # force re-download
+```
+
+Equivalent manual steps:
+
+```bash
+cd ML_Ops_assignment/Raw_data
+curl -L -o heart-disease.zip \
+    https://archive.ics.uci.edu/static/public/45/heart+disease.zip
+unzip -o heart-disease.zip -d heart+disease
+rm heart-disease.zip
+```
+
+The cleaned 80/20 train/test split is regenerated deterministically by
+`python -m src.data.prepare` (random seed 42).
+
+---
+
 ## Quick Start (local)
 
 ```bash
