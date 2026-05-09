@@ -16,6 +16,7 @@ Requires:  python-docx==1.1.2  (in addition to requirements-dev.txt)
 """
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
@@ -26,13 +27,22 @@ import seaborn as sns
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 METRICS_PATH = ROOT / "reports" / "metrics.json"
 FIG_DIR = ROOT / "reports" / "figures"
 SHOT_DIR = ROOT / "reports" / "screenshots"
 OUT_DOCX = ROOT / "reports" / "Final_Report.docx"
+
+# Max pixel width for embedded screenshots. At 150 dpi rendered at
+# ~15 cm wide, ~1400 px is more than enough; anything larger just bloats
+# the docx without visible benefit. Originals on disk are untouched.
+EMBED_MAX_WIDTH_PX = 1200
+EMBED_JPEG_QUALITY = 78
 
 # -------------------------- Architecture diagram --------------------------
 
@@ -271,8 +281,71 @@ def add_bullets(doc, items):
         _set_run(r, size=11)
 
 
+def add_hyperlink(paragraph, url: str, text: str, *, size=10, italic=True):
+    """Append a clickable hyperlink run to an existing paragraph."""
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/"
+        "relationships/hyperlink",
+        is_external=True,
+    )
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+    new_run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "1F3A68")
+    rPr.append(color)
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    rPr.append(underline)
+    sz = OxmlElement("w:sz")
+    sz.set(qn("w:val"), str(size * 2))
+    rPr.append(sz)
+    if italic:
+        rPr.append(OxmlElement("w:i"))
+    new_run.append(rPr)
+    t = OxmlElement("w:t")
+    t.text = text
+    t.set(qn("xml:space"), "preserve")
+    new_run.append(t)
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+    return hyperlink
+
+
+def _compressed_image_stream(img_path: Path) -> io.BytesIO:
+    """Return a BytesIO of the image resized/compressed for docx embedding.
+
+    Screenshots captured on Retina displays are ~3000 px wide while we
+    only render at ~15 cm (~900 px at 150 dpi). Down-sampling and
+    re-encoding cuts each image by 5-10x with no visible loss.
+    """
+    with Image.open(img_path) as im:
+        im.load()
+        if im.width > EMBED_MAX_WIDTH_PX:
+            new_h = int(im.height * EMBED_MAX_WIDTH_PX / im.width)
+            im = im.resize((EMBED_MAX_WIDTH_PX, new_h), Image.LANCZOS)
+        buf = io.BytesIO()
+        # Diagrams / charts (PNG) keep transparency; screenshots become
+        # JPEG since they have no alpha channel and compress far better.
+        if im.mode in ("RGBA", "LA") or "transparency" in im.info:
+            im.save(buf, format="PNG", optimize=True)
+            buf.name = "embed.png"
+        else:
+            im.convert("RGB").save(
+                buf, format="JPEG",
+                quality=EMBED_JPEG_QUALITY, optimize=True, progressive=True,
+            )
+            buf.name = "embed.jpg"
+    buf.seek(0)
+    return buf
+
+
 def add_figure(doc, img_path: Path, caption: str, width_cm=15.5):
-    doc.add_picture(str(img_path), width=Cm(width_cm))
+    stream = _compressed_image_stream(img_path)
+    doc.add_picture(stream, width=Cm(width_cm))
     last = doc.paragraphs[-1]
     last.alignment = WD_ALIGN_PARAGRAPH.CENTER
     cap = doc.add_paragraph()
@@ -348,9 +421,24 @@ def build_report(metrics: dict) -> Document:
              align=WD_ALIGN_PARAGRAPH.CENTER)
     add_para(doc, "Programme: M.Tech Software Engineering, BITS Pilani WILP",
              size=11, align=WD_ALIGN_PARAGRAPH.CENTER)
-    add_para(doc, "Repository: github.com/2025cs05011-nagenkri-bits/"
-             "mlops-heart-disease", size=10, italic=True,
-             align=WD_ALIGN_PARAGRAPH.CENTER)
+    repo_p = doc.add_paragraph()
+    repo_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    repo_label = repo_p.add_run("Repository: ")
+    _set_run(repo_label, size=10, italic=True)
+    add_hyperlink(
+        repo_p,
+        "https://github.com/2025cs05011-nagenkri-bits/mlops-heart-disease",
+        "https://github.com/2025cs05011-nagenkri-bits/mlops-heart-disease",
+    )
+    demo_p = doc.add_paragraph()
+    demo_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    label = demo_p.add_run("Demo video: ")
+    _set_run(label, size=10, italic=True)
+    add_hyperlink(
+        demo_p,
+        "https://drive.google.com/file/u/1/d/1XvKQtkyj9lgqTAD_HI0WvzmxaDykddqL/view?usp=drive_link",
+        "Google Drive - 5 minute walkthrough",
+    )
     doc.add_page_break()
 
     # ---- 1. Introduction ----
@@ -480,6 +568,15 @@ def build_report(metrics: dict) -> Document:
 
     lr = metrics["results"]["logistic_regression"]
     rf = metrics["results"]["random_forest"]
+    cap = doc.add_paragraph()
+    cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_run(
+        cap.add_run(
+            "Table 1. Cross-validation and held-out test-set performance "
+            "for both candidate models. * = selected model."
+        ),
+        size=9, italic=True, color=(0x55, 0x55, 0x55),
+    )
     add_table(doc,
         ["Model", "Best params", "CV ROC-AUC (mean +/- std)",
          "Test ROC-AUC", "Test F1", "Test Acc."],
