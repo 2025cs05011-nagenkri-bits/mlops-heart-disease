@@ -7,7 +7,8 @@ tuning) → MLflow tracking → Flask API → Docker → CI/CD → Kubernetes (H
 
 | | |
 |---|---|
-| **Repo** | `2025cs05011-nagenkri-bits/mlops-heart-disease` |
+| **Repo** | `https://github.com/2025cs05011-nagenkri-bits/mlops-heart-disease` |
+| **Demo video** | [Google Drive — 5-minute walkthrough](https://drive.google.com/file/u/1/d/1XvKQtkyj9lgqTAD_HI0WvzmxaDykddqL/view?usp=drive_link) |
 | **Best model** | Logistic Regression (`C=1.0`) — test ROC-AUC **0.958**, CV ROC-AUC **0.907 ± 0.018** |
 | **Container image** | `heart-disease-api:v2` (multi-stage, `python:3.9-slim`) |
 | **API endpoints** | `GET /health`, `POST /predict`, `GET /metrics` |
